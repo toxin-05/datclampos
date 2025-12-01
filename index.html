@@ -45,6 +45,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
+    <?php
+require_once 'includes/config.php';
+
+// Redirect if already logged in
+if (isLoggedIn()) {
+    redirect('dashboard.php');
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $username = sanitize($_POST['username']);
+    $password = $_POST['password'];
+    
+    // Verify CSRF token
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "Security token invalid. Please try again.";
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+        
+        if ($user && password_verify($password, $user['password'])) {
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['full_name'] = $user['full_name'];
+            $_SESSION['role'] = $user['role'];
+            
+            // Regenerate session ID for security
+            session_regenerate_id(true);
+            
+            redirect('dashboard.php');
+        } else {
+            $error = "Invalid username or password!";
+        }
+    }
+}
+?>
+    
 <body class="login-body">
     <!-- Animated Background Elements -->
     <div class="login-background">
